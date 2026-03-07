@@ -12,6 +12,7 @@ public class DemoApplication {
 
 }
 
+
 //================= AUTH =================
 
 //http://localhost:8081/auth/register    : POST
@@ -20,8 +21,8 @@ public class DemoApplication {
 
 //================= PROFILE =================
 
-//http://localhost:8081/api/profile      : GET
-//http://localhost:8081/api/profile      : PUT
+//http://localhost:8081/api/users/me      : GET
+//http://localhost:8081/api/users/update  : PUT
 //api/users/profile-image				 : POST 
 
 //================= (Follow/Following APIs) =================
