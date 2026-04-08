@@ -18,7 +18,6 @@ public class DemoApplication {
 //http://localhost:8081/auth/register    : POST
 //http://localhost:8081/auth/login       : POST
 
-
 //================= PROFILE =================
 
 //http://localhost:8081/api/users/me      : GET

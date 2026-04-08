@@ -28,7 +28,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
-
+        <!-- Fake data-->
+        <dependency>
+    		<groupId>com.github.javafaker</groupId>
+    		<artifactId>javafaker</artifactId>
+    		<version>1.0.2</version>
+		</dependency>
         <!-- MongoDB -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

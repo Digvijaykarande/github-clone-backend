@@ -20,7 +20,8 @@ public class AppUser {
     private String imageUrl;     
     private List<String> followers;
     private List<String> following;    
-    
+    public AppUser() {
+	}
 	public AppUser(String id, String username, String email, String password, String bio, String imageUrl,
 			List<String> followers, List<String> following) {
 		super();

@@ -3,7 +3,6 @@ package gitHubClone.demo.model;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -88,6 +87,11 @@ public class Repo {
 	}
 	public List<Commit> getCommits() {
 	    return commits;
+	}
+
+	public void setCommits(List<Commit> commits2) {
+		// TODO Auto-generated method stub
+		
 	}
 	
 }
