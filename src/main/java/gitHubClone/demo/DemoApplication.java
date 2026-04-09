@@ -40,10 +40,16 @@ public class DemoApplication {
 //GET 	 http://localhost:8081/api/repos/user/digvijay
 //GET 	 http://localhost:8081/api/repos/search?q=spring
 //GET 	 http://localhost:8081/api/repos/{repoId}/commits
+
+
 //================= (File APIs ) =================
 
 //POST   http://localhost:8081/api/repos/{repoId}/files
 //PUT	 http://localhost:8081/api/repos/{repoId}/files/{fileId}
 //DELETE http://localhost:8081/api/repos/{repoId}/files/{fileId}
 //GET http://localhost:8081/api/repos/{repoId}/files/{fileId}
-	
+
+
+//================= (Searching user ) =================
+
+//GET /api/users/search?q=UserName
