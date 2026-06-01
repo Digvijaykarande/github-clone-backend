@@ -1,6 +1,10 @@
 package gitHubClone.demo.dto;
 
-public class ProfileResponse {
+import java.io.Serializable;
+
+public class ProfileResponse implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private String id;
     private String username;
@@ -9,6 +13,8 @@ public class ProfileResponse {
     private String imageUrl;
     private int followers;
     private int following;
+
+    public ProfileResponse() {}
 
     public ProfileResponse(String id, String username, String email,
                            String bio, String imageUrl,
@@ -22,11 +28,11 @@ public class ProfileResponse {
         this.following = following;
     }
 
-    public String getId() { return id; }
-    public String getUsername() { return username; }
-    public String getEmail() { return email; }
-    public String getBio() { return bio; }
-    public String getImageUrl() { return imageUrl; }
-    public int getFollowers() { return followers; }
-    public int getFollowing() { return following; }
+    public String getId()        { return id; }
+    public String getUsername()  { return username; }
+    public String getEmail()     { return email; }
+    public String getBio()       { return bio; }
+    public String getImageUrl()  { return imageUrl; }
+    public int getFollowers()    { return followers; }
+    public int getFollowing()    { return following; }
 }

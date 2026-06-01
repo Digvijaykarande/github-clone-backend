@@ -1,7 +1,8 @@
-package gitHubClone.demo.services;
+package gitHubClone.demo.security.services;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import gitHubClone.demo.dto.AddFileRequest;
 import gitHubClone.demo.dto.CreateRepoRequest;
@@ -71,6 +72,7 @@ public class RepoService {
         return repoRepository.findByOwnerId(user.getId());
     }
 
+    //@Cacheable(value = "repos", key = "#repoId")
     public Repo getRepoById(String repoId) {
         return getRepo(repoId);
     }
@@ -113,7 +115,8 @@ public class RepoService {
         createAutoCommit(repo, email, "Added file: " + request.getPath());
         return repoRepository.save(repo);
     }
-
+    
+    
     public Repo updateFile(String repoId, String fileId,
                            String email, UpdateFileRequest request) {
         Repo repo = getRepo(repoId);

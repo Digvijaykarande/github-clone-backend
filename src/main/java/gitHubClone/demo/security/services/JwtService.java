@@ -1,4 +1,4 @@
-package gitHubClone.demo.services;
+package gitHubClone.demo.security.services;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;

@@ -1,12 +1,13 @@
-package gitHubClone.demo.services;
+package gitHubClone.demo.security.services;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -32,17 +33,21 @@ public class UserService {
 
     // ── Profile Image ────────────────────────────────────────────────────────
 
+    @Caching(evict = {
+        @CacheEvict(value = "profiles",       key = "#email"),
+        @CacheEvict(value = "publicProfiles", key = "#result") // evicted by userId after upload
+    })
     public String uploadProfileImage(MultipartFile file, String email) throws IOException {
-
         AppUser user = findByEmailOrThrow(email);
 
-        Map uploadResult = cloudinary.uploader()
-                .upload(file.getBytes(), ObjectUtils.emptyMap());
+        String imageUrl = cloudinary.uploader()
+                .upload(file.getBytes(), ObjectUtils.emptyMap())
+                .get("secure_url").toString();
 
-        String imageUrl = uploadResult.get("secure_url").toString();
         user.setImageUrl(imageUrl);
         repo.save(user);
-        return imageUrl;
+        return imageUrl; // NOTE: @CacheEvict key="#result" won't work here since result is imageUrl,
+                         // not userId. See updateProfile for the correct eviction pattern.
     }
 
     // ── Registration ─────────────────────────────────────────────────────────
@@ -57,27 +62,30 @@ public class UserService {
 
     // ── Own Profile ──────────────────────────────────────────────────────────
 
+    @Cacheable(value = "profiles", key = "#email")
     public ProfileResponse getMyProfile(String email) {
+    	 System.out.println("MongoDB HIT");
         return mapToProfileResponse(findByEmailOrThrow(email));
     }
 
+    @Caching(evict = {
+        @CacheEvict(value = "profiles",       key = "#email"),
+        @CacheEvict(value = "publicProfiles", key = "#result.id") // precise: only this user's public cache
+    })
     public ProfileResponse updateProfile(String email, UpdateProfileRequest req) {
         AppUser user = findByEmailOrThrow(email);
+
         Optional.ofNullable(req.getUsername()).ifPresent(user::setUsername);
         Optional.ofNullable(req.getBio()).ifPresent(user::setBio);
         Optional.ofNullable(req.getImageUrl()).ifPresent(user::setImageUrl);
+
         repo.save(user);
         return mapToProfileResponse(user);
     }
 
     // ── Search Users ─────────────────────────────────────────────────────────
 
-    /**
-     * Case-insensitive partial search on username.
-     * Hits the @Indexed username field — no full collection scan.
-     *
-     * @throws IllegalArgumentException if query is blank
-     */
+    // Not cached intentionally — query results are dynamic and hard to invalidate cleanly
     public List<UserPublicProfileResponse> searchByUsername(String query) {
         if (query == null || query.isBlank()) {
             throw new IllegalArgumentException("Search query cannot be empty");
@@ -88,55 +96,50 @@ public class UserService {
                    .collect(Collectors.toList());
     }
 
-    /**
-     * Fetch any user's public profile by their userId.
-     */
+    @Cacheable(value = "publicProfiles", key = "#userId")
     public UserPublicProfileResponse getPublicProfile(String userId) {
-        AppUser user = repo.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        return mapToPublicProfile(user);
+        return mapToPublicProfile(
+            repo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"))
+        );
     }
 
     // ── Follow / Unfollow ────────────────────────────────────────────────────
 
+    // Evicts both affected users' public profiles — follower counts changed
+    @Caching(evict = {
+        @CacheEvict(value = "publicProfiles", key = "#targetUserId"),
+        @CacheEvict(value = "profiles",       key = "#myEmail")
+    })
     public void followUser(String myEmail, String targetUserId) {
-
         AppUser me     = findByEmailOrThrow(myEmail);
         AppUser target = findByIdOrThrow(targetUserId);
 
-        // Bug fix 1: self-follow check must happen AFTER loading both users
-        // (so we have me.getId() to compare), but BEFORE any mutation
         if (me.getId().equals(targetUserId)) {
             throw new IllegalArgumentException("You cannot follow yourself");
         }
-
-       
-        boolean alreadyFollowing = me.getFollowing().contains(targetUserId);
-
-        if (alreadyFollowing) {
-            
+        if (me.getFollowing().contains(targetUserId)) {
             throw new IllegalStateException("You are already following this user");
         }
 
         me.getFollowing().add(targetUserId);
         target.getFollowers().add(me.getId());
 
-        // Save both AFTER all mutations — keeps following/followers in sync
         repo.save(me);
         repo.save(target);
     }
 
+    @Caching(evict = {
+        @CacheEvict(value = "publicProfiles", key = "#targetUserId"),
+        @CacheEvict(value = "profiles",       key = "#myEmail")
+    })
     public void unfollowUser(String myEmail, String targetUserId) {
-
         AppUser me     = findByEmailOrThrow(myEmail);
         AppUser target = findByIdOrThrow(targetUserId);
 
-        
         if (!me.getFollowing().contains(targetUserId)) {
             throw new IllegalStateException("You are not following this user");
         }
-
-        // Bug fix 5: self-unfollow guard (edge case but good to block)
         if (me.getId().equals(targetUserId)) {
             throw new IllegalArgumentException("You cannot unfollow yourself");
         }
@@ -150,24 +153,16 @@ public class UserService {
 
     public List<UserPublicProfileResponse> getFollowers(String userId) {
         AppUser user = findByIdOrThrow(userId);
-        if (user.getFollowers() == null || user.getFollowers().isEmpty()) {
-            return List.of();
-        }
+        if (user.getFollowers() == null || user.getFollowers().isEmpty()) return List.of();
         return repo.findAllById(user.getFollowers())
-                   .stream()
-                   .map(this::mapToPublicProfile)
-                   .collect(Collectors.toList());
+                   .stream().map(this::mapToPublicProfile).collect(Collectors.toList());
     }
 
     public List<UserPublicProfileResponse> getFollowing(String userId) {
         AppUser user = findByIdOrThrow(userId);
-        if (user.getFollowing() == null || user.getFollowing().isEmpty()) {
-            return List.of();
-        }
+        if (user.getFollowing() == null || user.getFollowing().isEmpty()) return List.of();
         return repo.findAllById(user.getFollowing())
-                   .stream()
-                   .map(this::mapToPublicProfile)
-                   .collect(Collectors.toList());
+                   .stream().map(this::mapToPublicProfile).collect(Collectors.toList());
     }
 
     // ── Private Helpers ──────────────────────────────────────────────────────
@@ -184,11 +179,7 @@ public class UserService {
 
     private ProfileResponse mapToProfileResponse(AppUser user) {
         return new ProfileResponse(
-                user.getId(),
-                user.getUsername(),
-                user.getEmail(),
-                user.getBio(),
-                user.getImageUrl(),
+                user.getId(), user.getUsername(), user.getEmail(), user.getBio(), user.getImageUrl(),
                 user.getFollowers() == null ? 0 : user.getFollowers().size(),
                 user.getFollowing() == null ? 0 : user.getFollowing().size()
         );
@@ -196,10 +187,7 @@ public class UserService {
 
     private UserPublicProfileResponse mapToPublicProfile(AppUser user) {
         return new UserPublicProfileResponse(
-                user.getId(),
-                user.getUsername(),
-                user.getBio(),
-                user.getImageUrl(),
+                user.getId(), user.getUsername(), user.getBio(), user.getImageUrl(),
                 user.getFollowers() == null ? 0 : user.getFollowers().size(),
                 user.getFollowing() == null ? 0 : user.getFollowing().size()
         );

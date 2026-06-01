@@ -20,13 +20,12 @@ import gitHubClone.demo.dto.UpdateFileRequest;
 import gitHubClone.demo.model.CodeFile;
 import gitHubClone.demo.model.Commit;
 import gitHubClone.demo.model.Repo;
-import gitHubClone.demo.services.RepoService;
 
 @RestController
 @RequestMapping("/api/repos")
 public class RepoController {
 	@Autowired
-	private RepoService repoService;
+	private gitHubClone.demo.security.services.RepoService repoService;
 	
 	//create repo
 	@PostMapping

@@ -21,7 +21,8 @@ import org.springframework.web.multipart.MultipartFile;
 import gitHubClone.demo.dto.ProfileResponse;
 import gitHubClone.demo.dto.UpdateProfileRequest;
 import gitHubClone.demo.dto.UserPublicProfileResponse;
-import gitHubClone.demo.services.UserService;
+import gitHubClone.demo.security.services.UserService;
+
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
