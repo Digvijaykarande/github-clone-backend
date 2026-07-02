@@ -5,9 +5,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -33,10 +30,7 @@ public class UserService {
 
     // ── Profile Image ────────────────────────────────────────────────────────
 
-    @Caching(evict = {
-        @CacheEvict(value = "profiles",       key = "#email"),
-        @CacheEvict(value = "publicProfiles", key = "#result") // evicted by userId after upload
-    })
+
     public String uploadProfileImage(MultipartFile file, String email) throws IOException {
         AppUser user = findByEmailOrThrow(email);
 
@@ -62,16 +56,12 @@ public class UserService {
 
     // ── Own Profile ──────────────────────────────────────────────────────────
 
-    @Cacheable(value = "profiles", key = "#email")
     public ProfileResponse getMyProfile(String email) {
     	 System.out.println("MongoDB HIT");
         return mapToProfileResponse(findByEmailOrThrow(email));
     }
 
-    @Caching(evict = {
-        @CacheEvict(value = "profiles",       key = "#email"),
-        @CacheEvict(value = "publicProfiles", key = "#result.id") // precise: only this user's public cache
-    })
+
     public ProfileResponse updateProfile(String email, UpdateProfileRequest req) {
         AppUser user = findByEmailOrThrow(email);
 
@@ -96,7 +86,6 @@ public class UserService {
                    .collect(Collectors.toList());
     }
 
-    @Cacheable(value = "publicProfiles", key = "#userId")
     public UserPublicProfileResponse getPublicProfile(String userId) {
         return mapToPublicProfile(
             repo.findById(userId)
@@ -107,10 +96,7 @@ public class UserService {
     // ── Follow / Unfollow ────────────────────────────────────────────────────
 
     // Evicts both affected users' public profiles — follower counts changed
-    @Caching(evict = {
-        @CacheEvict(value = "publicProfiles", key = "#targetUserId"),
-        @CacheEvict(value = "profiles",       key = "#myEmail")
-    })
+
     public void followUser(String myEmail, String targetUserId) {
         AppUser me     = findByEmailOrThrow(myEmail);
         AppUser target = findByIdOrThrow(targetUserId);
@@ -129,10 +115,7 @@ public class UserService {
         repo.save(target);
     }
 
-    @Caching(evict = {
-        @CacheEvict(value = "publicProfiles", key = "#targetUserId"),
-        @CacheEvict(value = "profiles",       key = "#myEmail")
-    })
+
     public void unfollowUser(String myEmail, String targetUserId) {
         AppUser me     = findByEmailOrThrow(myEmail);
         AppUser target = findByIdOrThrow(targetUserId);
