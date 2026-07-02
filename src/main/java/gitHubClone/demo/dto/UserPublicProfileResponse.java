@@ -1,10 +1,6 @@
 package gitHubClone.demo.dto;
 
-import java.io.Serializable;
-
-public class UserPublicProfileResponse implements Serializable {
-
-    private static final long serialVersionUID = 1L;
+public class UserPublicProfileResponse{
 
     private String id;
     private String username;
